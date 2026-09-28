@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import Dict, Protocol, Sequence, Tuple
 
 import networkx as nx
@@ -97,6 +98,12 @@ class DesignVariableSizingEncoder:
         return float(value)
 
 
+@dataclass
+class _DSGDecoderCache:
+    raw_to_corrected: Dict[Tuple[float, ...], Tuple[float, ...]] = field(default_factory=dict)
+    representations: Dict[Tuple[float, ...], "GraphRepresentation"] = field(default_factory=dict)
+
+
 class DSGGraphDecoder:
     """Decode design vectors into neutral SBArchOpt graph representations."""
 
@@ -111,19 +118,18 @@ class DSGGraphDecoder:
         self._labelings = tuple(
             labelings if labelings is not None else get_default_dsg_labelings()
         )
+        if len({labeling.key for labeling in self._labelings}) != len(self._labelings):
+            raise ValueError("node labeling keys must be unique")
         self.sizing_encoders = tuple(
             sizing_encoders
             if sizing_encoders is not None
             else (DesignVariableSizingEncoder(processor),)
         )
-        self._raw_to_corrected: Dict[Tuple[float, ...], Tuple[float, ...]] = {}
-        self._representations: Dict[Tuple[float, ...], "GraphRepresentation"] = {}
+        self._cache = _DSGDecoderCache()
 
     def __deepcopy__(self, memo):
-        copied = self.__class__.__new__(self.__class__)
-        memo[id(self)] = copied
-        copied.__dict__ = self.__dict__.copy()
-        return copied
+        memo[id(self)] = self
+        return self
 
     @property
     def labelings(self):
@@ -141,19 +147,19 @@ class DSGGraphDecoder:
         representations = []
         for row in np.asarray(x):
             raw_key = tuple(np.asarray(row, dtype=float))
-            corrected_key = self._raw_to_corrected.get(raw_key)
+            corrected_key = self._cache.raw_to_corrected.get(raw_key)
             graph = None
             if corrected_key is None:
                 graph, x_imputed, _ = self.processor.get_graph(row, create=False)
                 corrected_key = tuple(x_imputed)
-                self._raw_to_corrected[raw_key] = corrected_key
+                self._cache.raw_to_corrected[raw_key] = corrected_key
 
-            representation = self._representations.get(corrected_key)
+            representation = self._cache.representations.get(corrected_key)
             if representation is None:
                 if graph is None:
                     graph, _, _ = self.processor.get_graph(corrected_key)
                 representation = self._representation(graph, corrected_key)
-                self._representations[corrected_key] = representation
+                self._cache.representations[corrected_key] = representation
             representations.append(representation)
         return representations
 

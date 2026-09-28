@@ -125,6 +125,22 @@ def test_dsg_graph_decoder_copies_share_representations():
     decoder = DSGGraphDecoder(GraphProcessor(dsg))
     copied = copy.deepcopy(decoder)
 
+    assert copied is decoder
     representation = decoder.decode(np.empty((1, 0)))[0]
 
     assert copied.decode(np.empty((1, 0)))[0] is representation
+
+
+def test_dsg_graph_decoder_rejects_duplicate_labeling_keys():
+    from sb_arch_opt.algo.arch_sbo.graph import NodeLabeling
+
+    root = NamedNode("root")
+    dsg = BasicDSG()
+    dsg.add_node(root)
+    dsg = dsg.set_start_nodes({root})
+
+    with pytest.raises(ValueError, match="labeling keys must be unique"):
+        DSGGraphDecoder(
+            GraphProcessor(dsg),
+            labelings=[NodeLabeling("same", str), NodeLabeling("same", repr)],
+        )
