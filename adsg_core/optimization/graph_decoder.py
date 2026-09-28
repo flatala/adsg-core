@@ -72,17 +72,30 @@ def get_default_dsg_labelings():
 
 
 class DSGSizingEncoder(Protocol):
+    """Provide extra sizing values for each decoded DSG.
+
+    Declare one feature for each value returned by ``encode``. The decoder
+    combines the values from its sizing encoders in the order they are given.
+    """
 
     @property
     def features(self) -> Sequence["SizingFeature"]:
+        """Sizing features in the same order as the values from ``encode``."""
         ...
 
     def encode(self, graph: DSGType, x_imputed: Sequence[float]) -> np.ndarray:
+        """Extract sizing values for one design.
+
+        :param graph: The DSG generated for this design.
+        :param x_imputed: Its corrected design vector, including imputed values
+            for inactive variables.
+        :return: One-dimensional array with one value per declared feature.
+        """
         ...
 
 
 class DesignVariableSizingEncoder:
-    """Export additional DesignVariableNode values as normalized sizing features."""
+    """Encode DSG design-variable node values as sizing features."""
 
     def __init__(self, processor: GraphProcessor):
         self._variables = tuple(
