@@ -1,4 +1,27 @@
-"""Optional SBArchOpt graph decoder for DSG optimization problems."""
+"""
+MIT License
+
+Copyright: (c) 2026, Deutsches Zentrum fuer Luft- und Raumfahrt e.V.
+Contact: jasper.bussemaker@dlr.de
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +34,7 @@ import numpy as np
 from adsg_core.graph.adsg import DSGType
 from adsg_core.graph.adsg_nodes import DesignVariableNode
 from adsg_core.graph.graph_edges import get_edge_type
-from adsg_core.graph.labeling import constant_label, dsg_type_label, node_type_label
+from adsg_core.graph.labeling import constant_label, dsg_type_label
 from adsg_core.optimization.graph_processor import GraphProcessor
 
 try:
@@ -45,7 +68,6 @@ def get_default_dsg_labelings():
     return (
         NodeLabeling("adsg_core.constant", constant_label),
         NodeLabeling("adsg_core.dsg", dsg_type_label),
-        NodeLabeling("adsg_core.type", node_type_label),
     )
 
 
