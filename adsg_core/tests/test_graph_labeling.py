@@ -4,7 +4,6 @@ from adsg_core.graph.adsg_nodes import (
     NamedNode,
     SelectionChoiceNode,
 )
-from adsg_core.graph.labeling import constant_label, dsg_type_label
 
 
 def test_generic_node_labelings():
@@ -16,5 +15,4 @@ def test_generic_node_labelings():
     ]
 
     for node, role in nodes_and_roles:
-        assert constant_label(node) == "node"
-        assert dsg_type_label(node) == role
+        assert node.get_dsg_label() == role

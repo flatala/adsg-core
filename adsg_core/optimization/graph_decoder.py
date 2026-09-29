@@ -26,6 +26,7 @@ SOFTWARE.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from operator import methodcaller
 from typing import Dict, Protocol, Sequence, Tuple
 
 import networkx as nx
@@ -34,7 +35,6 @@ import numpy as np
 from adsg_core.graph.adsg import DSGType
 from adsg_core.graph.adsg_nodes import DesignVariableNode
 from adsg_core.graph.graph_edges import get_edge_type
-from adsg_core.graph.labeling import constant_label, dsg_type_label
 from adsg_core.optimization.graph_processor import GraphProcessor
 
 try:
@@ -54,21 +54,12 @@ __all__ = [
     "DSGSizingEncoder",
     "DesignVariableSizingEncoder",
     "DSGGraphDecoder",
-    "get_default_dsg_labelings",
 ]
 
 
 def _check_dependency():
     if not HAS_SB_ARCH_OPT_GRAPH:
         raise ImportError("SBArchOpt graph support is not installed")
-
-
-def get_default_dsg_labelings():
-    _check_dependency()
-    return (
-        NodeLabeling("adsg_core.constant", constant_label),
-        NodeLabeling("adsg_core.dsg", dsg_type_label),
-    )
 
 
 class DSGSizingEncoder(Protocol):
@@ -142,19 +133,24 @@ class _DSGDecoderCache:
 class DSGGraphDecoder:
     """Decode design vectors into neutral SBArchOpt graph representations."""
 
+    @staticmethod
+    def _constant_label(_node):
+        return "node"
+
     def __init__(
         self,
         processor: GraphProcessor,
-        labelings=None,
         sizing_encoders: Sequence[DSGSizingEncoder] = None,
+        *,
+        use_constant_labels: bool = True,
+        use_dsg_type_labels: bool = True,
     ):
         _check_dependency()
         self.processor = processor
-        self._labelings = tuple(
-            labelings if labelings is not None else get_default_dsg_labelings()
-        )
-        if len({labeling.key for labeling in self._labelings}) != len(self._labelings):
-            raise ValueError("node labeling keys must be unique")
+        self.use_constant_labels = use_constant_labels
+        self.use_dsg_type_labels = use_dsg_type_labels
+        self.constant_labeling = NodeLabeling("adsg_core.constant", self._constant_label)
+        self.dsg_type_labeling = NodeLabeling("adsg_core.dsg", methodcaller("get_dsg_label"))
         self.sizing_encoders = tuple(
             sizing_encoders
             if sizing_encoders is not None
@@ -168,7 +164,17 @@ class DSGGraphDecoder:
 
     @property
     def labelings(self):
-        return self._labelings
+        return self.constant_labeling, self.dsg_type_labeling
+
+    @property
+    def selected_labelings(self):
+        """Labelings selected by the decoder's boolean options."""
+        selected = []
+        if self.use_constant_labels:
+            selected.append(self.constant_labeling)
+        if self.use_dsg_type_labels:
+            selected.append(self.dsg_type_labeling)
+        return tuple(selected)
 
     @property
     def sizing_features(self):

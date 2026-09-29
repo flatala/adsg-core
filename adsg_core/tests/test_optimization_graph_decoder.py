@@ -1,4 +1,5 @@
 import copy
+import pickle
 
 import numpy as np
 import pytest
@@ -6,7 +7,10 @@ import pytest
 from adsg_core.graph.adsg_basic import BasicDSG
 from adsg_core.graph.adsg_nodes import ConnectorNode, DesignVariableNode, NamedNode
 from adsg_core.graph.graph_edges import EdgeType, add_edge
-from adsg_core.optimization.graph_decoder import HAS_SB_ARCH_OPT_GRAPH, DSGGraphDecoder
+from adsg_core.optimization.graph_decoder import (
+    HAS_SB_ARCH_OPT_GRAPH,
+    DSGGraphDecoder,
+)
 from adsg_core.optimization.graph_processor import GraphProcessor
 
 
@@ -131,16 +135,25 @@ def test_dsg_graph_decoder_copies_share_representations():
     assert copied.decode(np.empty((1, 0)))[0] is representation
 
 
-def test_dsg_graph_decoder_rejects_duplicate_labeling_keys():
-    from sb_arch_opt.algo.arch_sbo.graph import NodeLabeling
-
+def test_dsg_graph_decoder_labeling_flags():
     root = NamedNode("root")
     dsg = BasicDSG()
     dsg.add_node(root)
     dsg = dsg.set_start_nodes({root})
+    decoder = DSGGraphDecoder(
+        GraphProcessor(dsg),
+        use_constant_labels=False,
+    )
 
-    with pytest.raises(ValueError, match="labeling keys must be unique"):
-        DSGGraphDecoder(
-            GraphProcessor(dsg),
-            labelings=[NodeLabeling("same", str), NodeLabeling("same", repr)],
-        )
+    assert decoder.constant_labeling in decoder.labelings
+    assert decoder.dsg_type_labeling in decoder.labelings
+    constant, dsg_type = pickle.loads(pickle.dumps(decoder.labelings))
+    assert constant(root) == "node"
+    assert dsg_type(root) == "named_node"
+    assert [labeling.key for labeling in decoder.selected_labelings] == ["adsg_core.dsg"]
+    decoder.use_constant_labels = True
+    decoder.use_dsg_type_labels = False
+    assert [labeling.key for labeling in decoder.selected_labelings] == ["adsg_core.constant"]
+
+    representation = decoder.decode(np.empty((1, 0)))[0]
+    assert set(representation.node_labels) == set(decoder.labelings)
